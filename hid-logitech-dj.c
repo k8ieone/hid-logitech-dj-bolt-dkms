@@ -115,6 +115,7 @@
 enum recvr_type {
 	recvr_type_dj,
 	recvr_type_hidpp,
+	recvr_type_bolt,
 	recvr_type_gaming_hidpp,
 	recvr_type_gaming_hidpp_ls_1_3,
 	recvr_type_mouse_only,
@@ -1150,6 +1151,10 @@ static void logi_hidpp_recv_queue_notif(struct hid_device *hdev,
 		logi_hidpp_dev_conn_notif_equad(hdev, hidpp_report, &workitem);
 		workitem.reports_supported |= STD_KEYBOARD;
 		break;
+	case 0x10:
+		device_type = "Bolt";
+		logi_hidpp_dev_conn_notif_equad(hdev, hidpp_report, &workitem);
+		break;
 	case 0x0f:
 	case 0x11:
 		device_type = "eQUAD Lightspeed 1.2";
@@ -1864,6 +1869,7 @@ static int logi_dj_probe(struct hid_device *hdev,
 	struct dj_receiver_dev *djrcv_dev;
 	struct usb_interface *intf;
 	unsigned int no_dj_interfaces = 0;
+	int ifnum = -1;
 	bool has_hidpp = false;
 	unsigned long flags;
 	int retval;
@@ -1888,6 +1894,7 @@ static int logi_dj_probe(struct hid_device *hdev,
 	switch (id->driver_data) {
 	case recvr_type_dj:		no_dj_interfaces = 3; break;
 	case recvr_type_hidpp:		no_dj_interfaces = 2; break;
+	case recvr_type_bolt:		no_dj_interfaces = 3; break;
 	case recvr_type_gaming_hidpp:	no_dj_interfaces = 3; break;
 	case recvr_type_gaming_hidpp_ls_1_3: no_dj_interfaces = 3; break;
 	case recvr_type_mouse_only:	no_dj_interfaces = 2; break;
@@ -1897,6 +1904,15 @@ static int logi_dj_probe(struct hid_device *hdev,
 	}
 	if (hid_is_usb(hdev)) {
 		intf = to_usb_interface(hdev->dev.parent);
+		if (intf)
+			ifnum = intf->altsetting->desc.bInterfaceNumber;
+
+		if (id->driver_data == recvr_type_bolt && intf &&
+		    ifnum != LOGITECH_DJ_INTERFACE_NUMBER) {
+			hdev->quirks |= HID_QUIRK_INPUT_PER_APP;
+			return hid_hw_start(hdev, HID_CONNECT_DEFAULT);
+		}
+
 		if (intf && intf->altsetting->desc.bInterfaceNumber >=
 							no_dj_interfaces) {
 			hdev->quirks |= HID_QUIRK_INPUT_PER_APP;
@@ -2052,10 +2068,10 @@ static void logi_dj_remove(struct hid_device *hdev)
 }
 
 static const struct hid_device_id logi_dj_receivers[] = {
-	// { /* Logi Bolt receiver (0xc548) */
-	//   HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-	//   USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
-	//  .driver_data = recvr_type_dj},
+	{ /* Logi Bolt receiver (0xc548) */
+	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+	  USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
+	 .driver_data = recvr_type_bolt},
 
 	{ /* Logitech unifying receiver (0xc52b) */
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
