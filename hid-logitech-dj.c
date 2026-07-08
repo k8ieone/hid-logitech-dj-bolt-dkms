@@ -2052,6 +2052,11 @@ static void logi_dj_remove(struct hid_device *hdev)
 }
 
 static const struct hid_device_id logi_dj_receivers[] = {
+	// { /* Logi Bolt receiver (0xc548) */
+	//   HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+	//   USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
+	//  .driver_data = recvr_type_dj},
+
 	{ /* Logitech unifying receiver (0xc52b) */
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 		USB_DEVICE_ID_LOGITECH_UNIFYING_RECEIVER),
