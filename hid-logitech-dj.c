@@ -1151,15 +1151,15 @@ static void logi_hidpp_recv_queue_notif(struct hid_device *hdev,
 		logi_hidpp_dev_conn_notif_equad(hdev, hidpp_report, &workitem);
 		workitem.reports_supported |= STD_KEYBOARD;
 		break;
-	case 0x10:
-		device_type = "Bolt";
-		logi_hidpp_dev_conn_notif_equad(hdev, hidpp_report, &workitem);
-		break;
 	case 0x0f:
 	case 0x11:
 		device_type = "eQUAD Lightspeed 1.2";
 		logi_hidpp_dev_conn_notif_equad(hdev, hidpp_report, &workitem);
 		workitem.reports_supported |= STD_KEYBOARD;
+		break;
+	case 0x10:
+		device_type = "Bolt";
+		logi_hidpp_dev_conn_notif_equad(hdev, hidpp_report, &workitem);
 		break;
 	}
 
@@ -1927,8 +1927,7 @@ static int logi_dj_probe(struct hid_device *hdev,
 			return hid_hw_start(hdev, HID_CONNECT_DEFAULT);
 		}
 
-		if (intf && intf->altsetting->desc.bInterfaceNumber >=
-							no_dj_interfaces) {
+		if (intf && ifnum >= no_dj_interfaces) {
 			hdev->quirks |= HID_QUIRK_INPUT_PER_APP;
 			return hid_hw_start(hdev, HID_CONNECT_DEFAULT);
 		}
@@ -2089,7 +2088,7 @@ static void logi_dj_remove(struct hid_device *hdev)
 static const struct hid_device_id logi_dj_receivers[] = {
 	{ /* Logi Bolt receiver (0xc548) */
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-	  USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
+		USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
 	 .driver_data = recvr_type_bolt},
 
 	{ /* Logitech unifying receiver (0xc52b) */
