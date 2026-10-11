@@ -3,13 +3,7 @@
 This directory contains an out-of-tree DKMS package scaffold for the Linux
 `hid-logitech-dj` driver for quick local iteration and testing.
 
-## Files
-
-- `hid-logitech-dj.c`: Driver source copied from `drivers/hid/`
-- `hid-ids.h`: Header copied from `drivers/hid/`
-- `Makefile`: Out-of-tree module build rules
-- `dkms.conf`: DKMS metadata
-- `PKGBUILD`: Arch Linux package recipe (emphasis quick and local)
+This branch follows [this patch series](https://lore.kernel.org/linux-input/20261002-bolt-input-rfc-v1-0-333e1f350586@gmail.com/) from the LKML.
 
 ## Build and install (Arch)
 
@@ -17,9 +11,9 @@ This directory contains an out-of-tree DKMS package scaffold for the Linux
 makepkg -si
 ```
 
-This installs source under `/usr/src/hid-logitech-dj-bolt-dkms-<version>/` for DKMS.
+This installs sources under `/usr/src/hid-logitech-dj-bolt-dkms-<version>/` for DKMS.
 
-## Manual DKMS install
+## Manual DKMS install on other distros
 
 ```bash
 sudo dkms add -m hid-logitech-dj-bolt -v <version>

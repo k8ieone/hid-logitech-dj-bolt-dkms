@@ -115,13 +115,13 @@
 enum recvr_type {
 	recvr_type_dj,
 	recvr_type_hidpp,
-	recvr_type_bolt,
 	recvr_type_gaming_hidpp,
 	recvr_type_gaming_hidpp_ls_1_3,
 	recvr_type_mouse_only,
 	recvr_type_27mhz,
 	recvr_type_bluetooth,
 	recvr_type_dinovo,
+	recvr_type_bolt,
 };
 
 struct dj_report {
@@ -637,8 +637,6 @@ static const u8 hid_reportid_size_map[NUMBER_OF_HID_REPORTS] = {
 	[8] = 2,		/* Media Center */
 };
 
-
-#define LOGITECH_DJ_INTERFACE_NUMBER 0x02
 
 static const struct hid_ll_driver logi_dj_ll_driver;
 
@@ -1545,7 +1543,8 @@ static int logi_dj_ll_parse(struct hid_device *hid)
 	if (djdev->reports_supported & STD_MOUSE) {
 		dbg_hid("%s: sending a mouse descriptor, reports_supported: %llx\n",
 			__func__, djdev->reports_supported);
-		if (djdev->dj_receiver_dev->type == recvr_type_gaming_hidpp ||
+		if (djdev->dj_receiver_dev->type == recvr_type_bolt ||
+		    djdev->dj_receiver_dev->type == recvr_type_gaming_hidpp ||
 		    djdev->dj_receiver_dev->type == recvr_type_mouse_only)
 			rdcat(rdesc, &rsize, mse_high_res_descriptor,
 			      sizeof(mse_high_res_descriptor));
@@ -1750,6 +1749,10 @@ static int logi_dj_hidpp_event(struct hid_device *hdev,
 
 	dj_dev = djrcv_dev->paired_dj_devices[device_index];
 
+	/*
+	 * Bolt receivers send explicit unpair notifications as HID++ events;
+	 * queue device removal when we receive one.
+	 */
 	if (djrcv_dev->type == recvr_type_bolt &&
 	    hidpp_report->report_id == REPORT_ID_HIDPP_SHORT &&
 	    hidpp_report->sub_id == REPORT_TYPE_NOTIF_DEVICE_UNPAIRED) {
@@ -1883,7 +1886,6 @@ static int logi_dj_probe(struct hid_device *hdev,
 	struct dj_receiver_dev *djrcv_dev;
 	struct usb_interface *intf;
 	unsigned int no_dj_interfaces = 0;
-	int ifnum = -1;
 	bool has_hidpp = false;
 	unsigned long flags;
 	int retval;
@@ -1908,26 +1910,18 @@ static int logi_dj_probe(struct hid_device *hdev,
 	switch (id->driver_data) {
 	case recvr_type_dj:		no_dj_interfaces = 3; break;
 	case recvr_type_hidpp:		no_dj_interfaces = 2; break;
-	case recvr_type_bolt:		no_dj_interfaces = 3; break;
 	case recvr_type_gaming_hidpp:	no_dj_interfaces = 3; break;
 	case recvr_type_gaming_hidpp_ls_1_3: no_dj_interfaces = 3; break;
 	case recvr_type_mouse_only:	no_dj_interfaces = 2; break;
 	case recvr_type_27mhz:		no_dj_interfaces = 2; break;
 	case recvr_type_bluetooth:	no_dj_interfaces = 2; break;
 	case recvr_type_dinovo:		no_dj_interfaces = 2; break;
+	case recvr_type_bolt:		no_dj_interfaces = 3; break;
 	}
 	if (hid_is_usb(hdev)) {
 		intf = to_usb_interface(hdev->dev.parent);
-		if (intf)
-			ifnum = intf->altsetting->desc.bInterfaceNumber;
-
-		if (id->driver_data == recvr_type_bolt && intf &&
-		    ifnum != LOGITECH_DJ_INTERFACE_NUMBER) {
-			hdev->quirks |= HID_QUIRK_INPUT_PER_APP;
-			return hid_hw_start(hdev, HID_CONNECT_DEFAULT);
-		}
-
-		if (intf && ifnum >= no_dj_interfaces) {
+		if (intf && intf->altsetting->desc.bInterfaceNumber >=
+							no_dj_interfaces) {
 			hdev->quirks |= HID_QUIRK_INPUT_PER_APP;
 			return hid_hw_start(hdev, HID_CONNECT_DEFAULT);
 		}
@@ -2086,11 +2080,6 @@ static void logi_dj_remove(struct hid_device *hdev)
 }
 
 static const struct hid_device_id logi_dj_receivers[] = {
-	{ /* Logi Bolt receiver (0xc548) */
-	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-		USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
-	 .driver_data = recvr_type_bolt},
-
 	{ /* Logitech unifying receiver (0xc52b) */
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 		USB_DEVICE_ID_LOGITECH_UNIFYING_RECEIVER),
@@ -2137,10 +2126,18 @@ static const struct hid_device_id logi_dj_receivers[] = {
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 		USB_DEVICE_ID_LOGITECH_NANO_RECEIVER_LIGHTSPEED_1_3),
 	 .driver_data = recvr_type_gaming_hidpp_ls_1_3},
+	{ /* Logitech Bolt receiver (0xc548) */
+	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+			 USB_DEVICE_ID_LOGITECH_BOLT_RECEIVER),
+	 .driver_data = recvr_type_bolt},
 	{ /* Logitech lightspeed receiver (0xc54d) */
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 		USB_DEVICE_ID_LOGITECH_NANO_RECEIVER_LIGHTSPEED_1_4),
 	 .driver_data = recvr_type_gaming_hidpp_ls_1_3},
+	{ /* Logitech lightspeed receiver (0xc545) */
+	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+		USB_DEVICE_ID_LOGITECH_NANO_RECEIVER_LIGHTSPEED_1_5),
+	.driver_data = recvr_type_gaming_hidpp_ls_1_3},
 
 	{ /* Logitech 27 MHz HID++ 1.0 receiver (0xc513) */
 	  HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH, USB_DEVICE_ID_MX3000_RECEIVER),
